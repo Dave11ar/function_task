@@ -15,14 +15,15 @@ struct function<R(Args...)> {
     swap(other);
   }
 
-  template<typename T>
-  function(T val) {
-    if (is_small<T>()) {
-      new(&buf) T(std::move(val));
-    } else {
-      *reinterpret_cast<T **>(&buf) = new T(std::move(val));
-    }
+  template<typename T, typename = std::enable_if_t<is_small<T>>>
+  function(T val, std::enable_if_t<is_small<T>>* = nullptr) {
+    new(&buf) T(std::move(val));
+    des = &descriptor<T, R, Args...>;
+  }
 
+  template<typename T, typename = std::enable_if_t<!is_small<T>>>
+  function(T val, std::enable_if_t<!is_small<T>>* = nullptr) {
+    *reinterpret_cast<T **>(&buf) = new T(std::move(val));
     des = &descriptor<T, R, Args...>;
   }
 

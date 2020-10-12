@@ -11,14 +11,13 @@ struct bad_function_call : std::exception {
 using buffer = typename std::aligned_storage<sizeof(void *), alignof(void *)>::type;
 
 template<typename T>
-bool is_small() {
-  return sizeof(T) <= sizeof(void *) && std::is_nothrow_move_assignable_v<T> &&
-      alignof(buffer) % alignof(T) == 0;
-}
+constexpr bool is_small = sizeof(T) <= sizeof(void *) &&
+    std::is_nothrow_move_assignable_v<T> && alignof(buffer) % alignof(T) == 0;
+
 
 template<typename T>
 T *get_pointer(buffer *buf) {
-  if (is_small<T>()) {
+  if (is_small<T>) {
     return reinterpret_cast<T *>(buf);
   } else {
     return *reinterpret_cast<T **>(buf);
@@ -27,7 +26,7 @@ T *get_pointer(buffer *buf) {
 
 template<typename T>
 T const *get_pointer(buffer const *buf) {
-  if (is_small<T>()) {
+  if (is_small<T>) {
     return reinterpret_cast<T const *>(buf);
   } else {
     return *reinterpret_cast<T *const *>(buf);
@@ -48,7 +47,7 @@ struct descriptor_t : descriptor_base<R, Args...> {
   }
 
   void destroy(buffer *buf) {
-    if (is_small<T>()) {
+    if (is_small<T>) {
       get_pointer<T>(buf)->~T();
     } else {
       delete get_pointer<T>(buf);
@@ -56,7 +55,7 @@ struct descriptor_t : descriptor_base<R, Args...> {
   }
 
   void copy(buffer *dest, buffer const *src) {
-    if (is_small<T>()) {
+    if (is_small<T>) {
       new(dest) T(*get_pointer<T>(src));
     } else {
       *reinterpret_cast<T **>(dest) = new T(*get_pointer<T>(src));
