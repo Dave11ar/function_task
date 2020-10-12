@@ -17,7 +17,7 @@ constexpr bool is_small = sizeof(T) <= sizeof(void *) &&
 
 template<typename T>
 T *get_pointer(buffer *buf) {
-  if (is_small<T>) {
+  if constexpr (is_small<T>) {
     return reinterpret_cast<T *>(buf);
   } else {
     return *reinterpret_cast<T **>(buf);
@@ -26,7 +26,7 @@ T *get_pointer(buffer *buf) {
 
 template<typename T>
 T const *get_pointer(buffer const *buf) {
-  if (is_small<T>) {
+  if constexpr (is_small<T>) {
     return reinterpret_cast<T const *>(buf);
   } else {
     return *reinterpret_cast<T *const *>(buf);
@@ -47,7 +47,7 @@ struct descriptor_t : descriptor_base<R, Args...> {
   }
 
   void destroy(buffer *buf) {
-    if (is_small<T>) {
+    if constexpr (is_small<T>) {
       get_pointer<T>(buf)->~T();
     } else {
       delete get_pointer<T>(buf);
@@ -55,7 +55,7 @@ struct descriptor_t : descriptor_base<R, Args...> {
   }
 
   void copy(buffer *dest, buffer const *src) {
-    if (is_small<T>) {
+    if constexpr (is_small<T>) {
       new(dest) T(*get_pointer<T>(src));
     } else {
       *reinterpret_cast<T **>(dest) = new T(*get_pointer<T>(src));
