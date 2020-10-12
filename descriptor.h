@@ -3,7 +3,7 @@
 #include <type_traits>
 
 struct bad_function_call : std::exception {
-  char const* what() const noexcept override {
+  char const *what() const noexcept override {
     return "bad function call";
   }
 };
@@ -16,21 +16,21 @@ bool is_small() {
       alignof(buffer) % alignof(T) == 0;
 }
 
-template <typename T>
+template<typename T>
 T *get_pointer(buffer *buf) {
   if (is_small<T>()) {
-    return reinterpret_cast<T*>(buf);
+    return reinterpret_cast<T *>(buf);
   } else {
-    return *reinterpret_cast<T**>(buf);
+    return *reinterpret_cast<T **>(buf);
   }
 }
 
-template <typename T>
-T const *get_const_pointer(buffer const *buf) {
+template<typename T>
+T const *get_pointer(buffer const *buf) {
   if (is_small<T>()) {
     return reinterpret_cast<T const *>(buf);
   } else {
-    return *reinterpret_cast<T * const *>(buf);
+    return *reinterpret_cast<T *const *>(buf);
   }
 }
 
@@ -39,13 +39,12 @@ struct descriptor_base {
   virtual R invoke(buffer const *buf, Args... args) = 0;
   virtual void destroy(buffer *buf) = 0;
   virtual void copy(buffer *dst, buffer const *src) = 0;
-  virtual ~descriptor_base() = default;
 };
 
 template<typename T, typename R, typename ...Args>
 struct descriptor_t : descriptor_base<R, Args...> {
   R invoke(buffer const *buf, Args... args) {
-    return (*get_const_pointer<T>(buf))(std::forward<Args>(args)...);
+    return (*get_pointer<T>(buf))(std::forward<Args>(args)...);
   }
 
   void destroy(buffer *buf) {
@@ -58,19 +57,19 @@ struct descriptor_t : descriptor_base<R, Args...> {
 
   void copy(buffer *dest, buffer const *src) {
     if (is_small<T>()) {
-      new (dest) T(*get_const_pointer<T>(src));
+      new(dest) T(*get_pointer<T>(src));
     } else {
-      *reinterpret_cast<T **>(dest) = new T(*get_const_pointer<T>(src));
+      *reinterpret_cast<T **>(dest) = new T(*get_pointer<T>(src));
     }
   }
 };
 
-template <typename T, typename R, typename ...Args>
-constexpr descriptor_t<T, R, Args...> descriptor;
+template<typename T, typename R, typename ...Args>
+descriptor_t<T, R, Args...> descriptor;
 
-template <typename R, typename ...Args>
+template<typename R, typename ...Args>
 struct empty_descriptor_t : descriptor_base<R, Args...> {
-  R invoke(buffer const * buf, Args... args) {
+  R invoke(buffer const *buf, Args... args) {
     throw bad_function_call();
   }
 
@@ -79,5 +78,5 @@ struct empty_descriptor_t : descriptor_base<R, Args...> {
   void copy(buffer *dest, buffer const *src) {}
 };
 
-template <typename R, typename ...Args>
-constexpr empty_descriptor_t<R, Args...> empty_descriptor;
+template<typename R, typename ...Args>
+empty_descriptor_t<R, Args...> empty_descriptor;

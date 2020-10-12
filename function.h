@@ -6,23 +6,21 @@ struct function;
 
 template<typename R, typename... Args>
 struct function<R(Args...)> {
-  function() noexcept {
-    des = &empty_descriptor<R, Args...>;
-  }
+  function() noexcept: des(&empty_descriptor<R, Args...>) {}
 
   function(function const &other) : des(other.des) {
     des->copy(&buf, &other.buf);
   }
-  function(function &&other) noexcept : function() {
+  function(function &&other) noexcept: function() {
     swap(other);
   }
 
   template<typename T>
   function(T val) {
     if (is_small<T>()) {
-      new (&buf) T(std::move(val));
+      new(&buf) T(std::move(val));
     } else {
-      *reinterpret_cast<T**>(&buf) = new T(std::move(val));
+      *reinterpret_cast<T **>(&buf) = new T(std::move(val));
     }
 
     des = &descriptor<T, R, Args...>;
@@ -60,7 +58,7 @@ struct function<R(Args...)> {
 
   template<typename T>
   T *target() noexcept {
-    if (!*this == true || des != &descriptor<T, R, Args...>) {
+    if (is_correct_target<T>()) {
       return nullptr;
     }
     return get_pointer<T>(&buf);
@@ -68,13 +66,18 @@ struct function<R(Args...)> {
 
   template<typename T>
   T const *target() const noexcept {
-    if (!*this == true || des != &descriptor<T, R, Args...>) {
+    if (is_correct_target<T>()) {
       return nullptr;
     }
-    return get_const_pointer<T>(&buf);
+    return get_pointer<T>(&buf);
   }
 
  private:
+  template<typename T>
+  bool is_correct_target() const {
+    return !*this == true || des != &descriptor<T, R, Args...>;
+  }
+
   void swap(function &other) {
     using std::swap;
     swap(buf, other.buf);
