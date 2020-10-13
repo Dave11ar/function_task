@@ -31,8 +31,7 @@ struct function<R(Args...)> {
       return *this;
     }
 
-    des = rhs.des;
-    des->copy(&buf, &rhs.buf);
+    function(rhs).swap(*this);
     return *this;
   }
   function &operator=(function &&rhs) noexcept {
@@ -78,7 +77,7 @@ struct function<R(Args...)> {
     return !*this == true || des != &descriptor<T, R, Args...>;
   }
 
-  void swap(function &other) {
+  void swap(function &other) noexcept {
     using std::swap;
     swap(buf, other.buf);
     swap(des, other.des);
