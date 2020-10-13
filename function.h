@@ -6,7 +6,7 @@ struct function;
 
 template<typename R, typename... Args>
 struct function<R(Args...)> {
-  function() noexcept: des(&empty_descriptor<R, Args...>) {}
+  function() noexcept: des(&fns::empty_descriptor<R, Args...>) {}
 
   function(function const &other) : des(other.des) {
     des->copy(&buf, &other.buf);
@@ -17,13 +17,13 @@ struct function<R(Args...)> {
 
   template<typename T>
   function(T val) {
-    if constexpr (is_small<T>) {
+    if constexpr (fns::is_small<T>) {
       new(&buf) T(std::move(val));
     } else {
       *reinterpret_cast<T **>(&buf) = new T(std::move(val));
     }
 
-    des = &descriptor<T, R, Args...>;
+    des = &fns::descriptor<T, R, Args...>;
   }
 
   function &operator=(function const &rhs) {
@@ -44,7 +44,7 @@ struct function<R(Args...)> {
   }
 
   explicit operator bool() const noexcept {
-    return des != &empty_descriptor<R, Args...>;
+    return des != &fns::empty_descriptor<R, Args...>;
   }
 
   R operator()(Args... args) const {
@@ -57,24 +57,18 @@ struct function<R(Args...)> {
 
   template<typename T>
   T *target() noexcept {
-    if (is_correct_target<T>()) {
-      return nullptr;
-    }
-    return get_pointer<T>(&buf);
+    return check_target<T>() ? fns::get_pointer<T>(&buf) : nullptr;
   }
 
   template<typename T>
   T const *target() const noexcept {
-    if (is_correct_target<T>()) {
-      return nullptr;
-    }
-    return get_pointer<T>(&buf);
+    return check_target<T>() ? fns::get_pointer<T>(&buf) : nullptr;
   }
 
  private:
   template<typename T>
-  bool is_correct_target() const {
-    return !*this == true || des != &descriptor<T, R, Args...>;
+  bool check_target() const noexcept {
+    return static_cast<bool>(*this) && des == &fns::descriptor<T, R, Args...>;
   }
 
   void swap(function &other) noexcept {
@@ -83,6 +77,6 @@ struct function<R(Args...)> {
     swap(des, other.des);
   }
 
-  buffer buf;
-  descriptor_base<R, Args...> *des;
+  fns::buffer buf;
+  fns::descriptor_base<R, Args...> *des;
 };

@@ -8,15 +8,15 @@ struct bad_function_call : std::exception {
   }
 };
 
+namespace fns{
 using buffer = typename std::aligned_storage<sizeof(void *), alignof(void *)>::type;
 
 template<typename T>
 constexpr bool is_small = sizeof(T) <= sizeof(void *) &&
     std::is_nothrow_move_assignable_v<T> && alignof(buffer) % alignof(T) == 0;
 
-
 template<typename T>
-T *get_pointer(buffer *buf) {
+T *get_pointer(buffer *buf) noexcept {
   if constexpr (is_small<T>) {
     return reinterpret_cast<T *>(buf);
   } else {
@@ -25,7 +25,7 @@ T *get_pointer(buffer *buf) {
 }
 
 template<typename T>
-T const *get_pointer(buffer const *buf) {
+T const *get_pointer(buffer const *buf) noexcept {
   if constexpr (is_small<T>) {
     return reinterpret_cast<T const *>(buf);
   } else {
@@ -79,3 +79,4 @@ struct empty_descriptor_t : descriptor_base<R, Args...> {
 
 template<typename R, typename ...Args>
 empty_descriptor_t<R, Args...> empty_descriptor;
+}
