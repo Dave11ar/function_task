@@ -8,7 +8,7 @@ struct bad_function_call : std::exception {
   }
 };
 
-namespace fns{
+namespace fns {
 using buffer = typename std::aligned_storage<sizeof(void *), alignof(void *)>::type;
 
 template<typename T>
@@ -35,18 +35,18 @@ T const *get_pointer(buffer const *buf) noexcept {
 
 template<typename R, typename ...Args>
 struct descriptor_base {
-  virtual R invoke(buffer const *buf, Args... args) = 0;
-  virtual void destroy(buffer *buf) = 0;
-  virtual void copy(buffer *dst, buffer const *src) = 0;
+  virtual R invoke(buffer const *buf, Args... args) const = 0;
+  virtual void destroy(buffer *buf) const= 0;
+  virtual void copy(buffer *dst, buffer const *src) const = 0;
 };
 
 template<typename T, typename R, typename ...Args>
 struct descriptor_t : descriptor_base<R, Args...> {
-  R invoke(buffer const *buf, Args... args) {
+  R invoke(buffer const *buf, Args... args) const {
     return (*get_pointer<T>(buf))(std::forward<Args>(args)...);
   }
 
-  void destroy(buffer *buf) {
+  void destroy(buffer *buf) const {
     if constexpr (is_small<T>) {
       get_pointer<T>(buf)->~T();
     } else {
@@ -54,7 +54,7 @@ struct descriptor_t : descriptor_base<R, Args...> {
     }
   }
 
-  void copy(buffer *dest, buffer const *src) {
+  void copy(buffer *dest, buffer const *src) const {
     if constexpr (is_small<T>) {
       new(dest) T(*get_pointer<T>(src));
     } else {
@@ -68,13 +68,12 @@ descriptor_t<T, R, Args...> descriptor;
 
 template<typename R, typename ...Args>
 struct empty_descriptor_t : descriptor_base<R, Args...> {
-  R invoke(buffer const *buf, Args... args) {
+  R invoke(buffer const *buf, Args... args) const {
     throw bad_function_call();
   }
 
-  void destroy(buffer *buf) {}
-
-  void copy(buffer *dest, buffer const *src) {}
+  void destroy(buffer *buf) const {}
+  void copy(buffer *dest, buffer const *src) const {}
 };
 
 template<typename R, typename ...Args>

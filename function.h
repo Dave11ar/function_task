@@ -16,14 +16,12 @@ struct function<R(Args...)> {
   }
 
   template<typename T>
-  function(T val) {
+  function(T val) : des(&fns::descriptor<T, R, Args...>) {
     if constexpr (fns::is_small<T>) {
       new(&buf) T(std::move(val));
     } else {
       *reinterpret_cast<T **>(&buf) = new T(std::move(val));
     }
-
-    des = &fns::descriptor<T, R, Args...>;
   }
 
   function &operator=(function const &rhs) {
@@ -77,6 +75,6 @@ struct function<R(Args...)> {
     swap(des, other.des);
   }
 
+  fns::descriptor_base<R, Args...> const *des;
   fns::buffer buf;
-  fns::descriptor_base<R, Args...> *des;
 };
