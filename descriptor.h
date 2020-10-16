@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include <utility>
 
 struct bad_function_call : std::exception {
   char const *what() const noexcept override {
@@ -13,7 +14,8 @@ using buffer = typename std::aligned_storage<sizeof(void *), alignof(void *)>::t
 
 template<typename T>
 constexpr bool is_small = sizeof(T) <= sizeof(void *) &&
-    std::is_nothrow_move_assignable_v<T> && alignof(buffer) % alignof(T) == 0;
+    std::is_nothrow_move_assignable_v<T> && std::is_nothrow_move_constructible_v<T> &&
+        alignof(buffer) % alignof(T) == 0;
 
 template<typename T>
 T *get_pointer(buffer *buf) noexcept {
@@ -37,7 +39,8 @@ template<typename R, typename ...Args>
 struct descriptor_base {
   virtual R invoke(buffer const *buf, Args... args) const = 0;
   virtual void destroy(buffer *buf) const= 0;
-  virtual void copy(buffer *dst, buffer const *src) const = 0;
+  virtual void copy(buffer *dest, buffer const *src) const = 0;
+  virtual void move(buffer *dest, buffer *src) const noexcept = 0;
 };
 
 template<typename T, typename R, typename ...Args>
@@ -61,6 +64,14 @@ struct descriptor_t : descriptor_base<R, Args...> {
       *reinterpret_cast<T **>(dest) = new T(*get_pointer<T>(src));
     }
   }
+
+  void move(buffer *dest, buffer *src) const noexcept {
+    if constexpr (is_small<T>) {
+      new(dest) T(std::move(*get_pointer<T>(src)));
+    } else {
+      *reinterpret_cast<T **>(dest) = *reinterpret_cast<T * const*>(src);
+    }
+  }
 };
 
 template<typename T, typename R, typename ...Args>
@@ -74,6 +85,7 @@ struct empty_descriptor_t : descriptor_base<R, Args...> {
 
   void destroy(buffer *buf) const {}
   void copy(buffer *dest, buffer const *src) const {}
+  void move(buffer *dest, buffer *src) const noexcept {};
 };
 
 template<typename R, typename ...Args>

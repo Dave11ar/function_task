@@ -11,8 +11,9 @@ struct function<R(Args...)> {
   function(function const &other) : des(other.des) {
     des->copy(&buf, &other.buf);
   }
-  function(function &&other) noexcept: function() {
-    swap(other);
+  function(function &&other) noexcept: des(other.des) {
+    des->move(&buf, &other.buf);
+    other.des = &fns::empty_descriptor<R, Args...>;
   }
 
   template<typename T>
@@ -29,11 +30,20 @@ struct function<R(Args...)> {
       return *this;
     }
 
+    // here swap works correct because constructor will be invoked
     function(rhs).swap(*this);
     return *this;
   }
   function &operator=(function &&rhs) noexcept {
-    swap(rhs);
+    if (this == &rhs) {
+      return *this;
+    }
+
+    // des assignment is correct because move can't throw exception
+    des->destroy(&buf);
+    des = rhs.des;
+    des->move(&buf, &rhs.buf);
+    rhs.des = &fns::empty_descriptor<R, Args...>;
     return *this;
   }
 
