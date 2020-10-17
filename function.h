@@ -38,9 +38,9 @@ struct function<R(Args...)> {
       return *this;
     }
 
-    rhs.des->move(&buf, &rhs.buf);
-
+    des->destroy(&buf);
     des = rhs.des;
+    des->move(&buf, &rhs.buf);
     rhs.des = &fns::empty_descriptor<R, Args...>;
     return *this;
   }
