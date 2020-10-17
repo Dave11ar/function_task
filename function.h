@@ -30,7 +30,6 @@ struct function<R(Args...)> {
       return *this;
     }
 
-    // here swap works correct because constructor will be invoked
     function(rhs).swap(*this);
     return *this;
   }
@@ -39,10 +38,9 @@ struct function<R(Args...)> {
       return *this;
     }
 
-    // des assignment is correct because move can't throw exception
-    des->destroy(&buf);
+    rhs.des->move(&buf, &rhs.buf);
+
     des = rhs.des;
-    des->move(&buf, &rhs.buf);
     rhs.des = &fns::empty_descriptor<R, Args...>;
     return *this;
   }
@@ -80,9 +78,9 @@ struct function<R(Args...)> {
   }
 
   void swap(function &other) noexcept {
-    using std::swap;
-    swap(buf, other.buf);
-    swap(des, other.des);
+    auto tmp = std::move(*this);
+    *this = std::move(other);
+    other = std::move(tmp);
   }
 
   fns::descriptor_base<R, Args...> const *des;

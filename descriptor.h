@@ -14,8 +14,7 @@ using buffer = typename std::aligned_storage<sizeof(void *), alignof(void *)>::t
 
 template<typename T>
 constexpr bool is_small = sizeof(T) <= sizeof(void *) &&
-    std::is_nothrow_move_assignable_v<T> && std::is_nothrow_move_constructible_v<T> &&
-        alignof(buffer) % alignof(T) == 0;
+    std::is_nothrow_move_constructible_v<T> && alignof(buffer) % alignof(T) == 0;
 
 template<typename T>
 T *get_pointer(buffer *buf) noexcept {
